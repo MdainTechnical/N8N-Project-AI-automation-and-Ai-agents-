@@ -1,0 +1,796 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const data = item.json;\n\n  // 1. Basic text cleaning\n  const name = String(data[\"Name\"] || \"\").trim();\n  const location = String(data[\"Location\"] || \"\").trim();\n  const propertyType = String(data[\"Property Type\"] || \"\").trim();\n  const bhk = String(data[\"BHK\"] || \"\").trim();\n  const timeline = String(data[\"TimeLine\"] || \"\").trim();\n\n  // 2. Phone number cleaning\n  let phone = String(data[\"Phone Number\"] || \"\")\n    .replace(/\\D/g, \"\");\n\n  // India country code handling\n  if (phone.length === 10) {\n    phone = \"+91\" + phone;\n  } else if (phone.startsWith(\"91\") && phone.length === 12) {\n    phone = \"+\" + phone;\n  }\n\n  // 3. Email cleaning\n  const email = String(data[\"Email\"] || \"\")\n    .trim()\n    .toLowerCase();\n\n  // 4. Budget cleaning\n  const budgetText = String(data[\"Budget\"] || \"\")\n    .trim()\n    .toLowerCase();\n\n  const budgetNumber = parseFloat(\n    budgetText.replace(/[^0-9.]/g, \"\")\n  ) || 0;\n\n  // 5. BHK number निकालना\n  const bhkNumber = parseInt(bhk.replace(/\\D/g, \"\")) || 0;\n\n  // 6. Final cleaned data\n  return {\n    json: {\n      name: name,\n      phone: phone,\n      email: email,\n      location: location,\n      budget: budgetText,\n      budgetNumber: budgetNumber,\n      propertyType: propertyType,\n      bhk: bhk,\n      bhkNumber: bhkNumber,\n      timeline: timeline,\n\n      // extra useful fields\n      leadSource: \"Website Form\",\n      cleaned: true,\n      cleanedAt: new Date().toISOString()\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        -400
+      ],
+      "id": "ec257a6a-0854-4f55-9225-50edb15bed69",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "formTitle": "Real Estate Bussiness",
+        "formDescription": "Real Estate Bussiness Description ",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name"
+            },
+            {
+              "fieldLabel": "Phone Number"
+            },
+            {
+              "fieldLabel": "Email"
+            },
+            {
+              "fieldLabel": "Location"
+            },
+            {
+              "fieldLabel": "Budget"
+            },
+            {
+              "fieldLabel": "Property Type"
+            },
+            {
+              "fieldLabel": "BHK"
+            },
+            {
+              "fieldLabel": "TimeLine"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -1008,
+        -400
+      ],
+      "id": "4a2fb353-6e0a-4b88-b7b3-a5b2c7c7e2d1",
+      "name": "On form submission",
+      "webhookId": "98c37876-b863-4cd0-8146-3df441075de7"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Name = {{ $json.name }}\n\nPhone = {{ $json.phone }}\n\nEmail = {{ $json.email }}\n\nLocation = {{ $json.location }}\n\nBudget = {{ $json.budget }}\n\nProperty Type = {{ $json.propertyType }}\n\nBHK = {{ $json.bhk }}\n\nTime Line = {{ $json.timeline }}\n\nLead Source = {{ $json.leadSource }}\n\nAnalyze this real estate business lead for lead qualification.\n\nUse the provided lead details such as Name, Phone Number, Email, Location, Budget, Property Type, BHK, and Timeline.\n\nGive the lead:\n1. Lead Score from 10 to 100\n2. Lead Category: Hot, Warm, or Cold\n3. Short reason for the score\n\nScoring:\n- 80–100 = Hot\n- 50–89 = Warm\n- 10–60 = Cold\n\nReturn the result in the required output format only.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a Real Estate Lead Qualification AI Agent.\n\nProcess each incoming lead once.\n\nIMPORTANT:\nUse only the actual data provided by the workflow and tool results.\nNever invent, guess, or modify customer information.\nNever generate a fake name, phone, email, budget, location, property type, BHK, timeline, or message.\n\nWORKFLOW:\n\n1. PHONE AND EMAIL VALIDATION\nUse the Phone Number AND Email Validation check tool once.\nCheck the provided phone number and email.\n\n2. DUPLICATE CHECK\nUse the Duplicate Data Check tool once.\nCheck the lead using the phone number and email.\n\nIf the lead already exists:\n- Do not use Data Save.\n- Set duplicate = true.\n- Return the existing lead information.\n- Do not create a new Lead ID.\n\nIf the lead does not exist:\n- Continue to lead qualification.\n\n3. LEAD ID\nGenerate the next sequential Lead ID based on the existing Lead IDs returned by the Duplicate Data Check tool.\n\nFormat:\nLD001\nLD002\nLD003\n...\nLD100\n...\nLD1000\n...\nLD2000\n\nAlways continue from the highest existing Lead ID.\nDo not generate a random Lead ID.\nIf there are no existing Lead IDs, start with LD001.\n\n4. LEAD ANALYSIS\nAnalyze only the provided:\n- Budget\n- Location\n- Property Type\n- BHK\n- Timeline\n- Message, if provided\n\nUse the actual customer data.\n\n5. LEAD SCORE\nGenerate one score from 10 to 100.\n\nScore classification:\n80–100 = Hot\n50–79 = Warm\n10–49 = Cold\n\n6. LEAD TYPE\nSet lead_type to exactly one:\nHot\nWarm\nCold\n\n7. LEAD SOURCE\nSet lead_source to:\nWebsite Form\n\nDo not invent another lead source.\n\n8. MESSAGE\nDo NOT generate a message.\n\nIf a Message is provided in the incoming data:\n- Keep the original message exactly as provided.\n- Return and save that message.\n\nIf no Message is provided:\n- Set message to an empty string.\n- Do not create a message.\n\n9. DATA SAVE\nFor a new, valid, non-duplicate lead, use the Data Save tool once.\n\nSave:\n- Lead ID\n- Name\n- Phone\n- Email\n- Location\n- Budget\n- Property Type\n- BHK\n- Time Line\n- Lead Source\n- Message\n- Lead Score\n- Lead Type\n\nSave the actual customer data without changing it.\n\n10. TOOL RULES\nDo not repeatedly call the same tool.\nDo not call a tool again after receiving a valid result.\nDo not use Simple Memory as the lead database.\nGoogle Sheets is the lead database.\n\n11. FINAL OUTPUT\nReturn only the structured output.\n\nRequired fields:\n\nlead_id\nname\nphone\nemail\nlocation\nbudget\nproperty_type\nbhk\ntimeline\nlead_source\nmessage\nlead_score\nlead_type\nphone_valid\nemail_valid\nduplicate\nreason"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -320,
+        -416
+      ],
+      "id": "29793ea0-e693-4708-8078-92a4f4dfd665",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -928,
+        128
+      ],
+      "id": "65a3198d-5b76-4ac6-bd32-9df4b2f73de3",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.email }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        -688,
+        128
+      ],
+      "id": "4192397d-922d-4d73-a529-086b2beaa5bf",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1XRyT0mCNrvEN571VBZQOow91Uq0mYrEiUxfG98wxqLA",
+          "mode": "list",
+          "cachedResultName": "Real Estate Bussiness Lead Bot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1XRyT0mCNrvEN571VBZQOow91Uq0mYrEiUxfG98wxqLA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Data Save",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1XRyT0mCNrvEN571VBZQOow91Uq0mYrEiUxfG98wxqLA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead ID": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Lead_ID', ``, 'string') }}",
+            "Name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Name', ``, 'string') }}",
+            "Phone ": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Phone_', ``, 'string') }}",
+            "Email": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Email', ``, 'string') }}",
+            "Location": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Location', ``, 'string') }}",
+            "Budget": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Budget', ``, 'string') }}",
+            "Property Type": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Property_Type', ``, 'string') }}",
+            "BHK": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('BHK', ``, 'string') }}",
+            "Time Line": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Time_Line', ``, 'string') }}",
+            "Lead Source": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Lead_Source', ``, 'string') }}",
+            "Message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+            "Lead Score": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Lead_Score', ``, 'string') }}",
+            "Lead Type": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Lead_Type', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone ",
+              "displayName": "Phone ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Property Type",
+              "displayName": "Property Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "BHK",
+              "displayName": "BHK",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Time Line",
+              "displayName": "Time Line",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Source",
+              "displayName": "Lead Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Type",
+              "displayName": "Lead Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        -528,
+        128
+      ],
+      "id": "27285072-4536-40b3-9e3c-d7574223b06a",
+      "name": "Data save",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "8osRsVtePBW2KCiY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1XRyT0mCNrvEN571VBZQOow91Uq0mYrEiUxfG98wxqLA",
+          "mode": "list",
+          "cachedResultName": "Real Estate Bussiness Lead Bot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1XRyT0mCNrvEN571VBZQOow91Uq0mYrEiUxfG98wxqLA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Data Save",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1XRyT0mCNrvEN571VBZQOow91Uq0mYrEiUxfG98wxqLA/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        -352,
+        128
+      ],
+      "id": "a7755a00-c57a-4c6f-a4db-c5d89b569147",
+      "name": "Duplicate Data Check",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "8osRsVtePBW2KCiY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\n\nconst phone = String(data.phone || \"\")\n  .replace(/\\D/g, \"\");\n\nconst email = String(data.email || \"\")\n  .trim()\n  .toLowerCase();\n\nconst phoneValid = /^[6-9]\\d{9}$/.test(phone);\n\nconst emailValid = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);\n\nreturn JSON.stringify({\n  phone: phone,\n  email: email,\n  phoneValid: phoneValid,\n  emailValid: emailValid,\n  validationStatus: phoneValid && emailValid ? \"Valid\" : \"Invalid\"\n});"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "position": [
+        -144,
+        128
+      ],
+      "id": "19b53111-00cf-43ce-bd8c-3605ae182d6e",
+      "name": "Phone Number AND Email Validation check"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"lead_id\": \"LD001\",\n  \"name\": \"Mohd Ali\",\n  \"phone\": \"+919876543210\",\n  \"email\": \"example@gmail.com\",\n  \"location\": \"Fatehpur Road, Sikar\",\n  \"budget\": \"80 Lakhs\",\n  \"property_type\": \"Apartment\",\n  \"bhk\": \"10 BHK\",\n  \"timeline\": \"15 Days\",\n  \"lead_source\": \"Website Form\",\n  \"message\": \"\",\n  \"lead_score\": 95,\n  \"lead_type\": \"Hot\",\n  \"phone_valid\": true,\n  \"email_valid\": true,\n  \"duplicate\": false,\n  \"reason\": \"High budget and short buying timeline\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        80,
+        128
+      ],
+      "id": "292f57b4-411d-4b20-9bef-1d1ef97b84a6",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.lead_type }}",
+                    "rightValue": "=Hot",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "48ca8671-5181-49b7-8178-c7a153b723b2"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Hot"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "380d3f0d-93fc-49e7-aa59-d97a351eaa54",
+                    "leftValue": "={{ $json.output.lead_type }}",
+                    "rightValue": "Warm",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Warm"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6c06fb77-f5da-4040-95a3-94467e038116",
+                    "leftValue": "={{ $json.output.lead_type }}",
+                    "rightValue": "Cold",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Cold"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        144,
+        -432
+      ],
+      "id": "b1c878bf-e9b1-4f8d-ab84-44f248c86840",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "lookkhan838338@gmail.com",
+          "mode": "list",
+          "cachedResultName": "lookkhan838338@gmail.com"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        480,
+        -720
+      ],
+      "id": "5238ab45-08ac-42c3-880f-e57bf93ced7a",
+      "name": "Get many events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "bqzFndjX6K5KQRGG",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst startHour = 9;\nconst endHour = 17;\n\nconst events = items.map(item => item.json);\n\nconst now = new Date();\n\nconst tomorrow = new Date(now);\ntomorrow.setDate(tomorrow.getDate() + 1);\ntomorrow.setHours(startHour, 0, 0, 0);\n\nfor (let hour = startHour; hour < endHour; hour++) {\n\n  const slotStart = new Date(tomorrow);\n  slotStart.setHours(hour, 0, 0, 0);\n\n  const slotEnd = new Date(tomorrow);\n  slotEnd.setHours(hour + 1, 0, 0, 0);\n\n  const isBooked = events.some(event => {\n    const eventStart = new Date(event.start?.dateTime);\n    const eventEnd = new Date(event.end?.dateTime);\n\n    return slotStart < eventEnd && slotEnd > eventStart;\n  });\n\n  if (!isBooked) {\n\n    return [\n      {\n        json: {\n          slot_start: slotStart.toISOString(),\n          slot_end: slotEnd.toISOString()\n        }\n      }\n    ];\n\n  }\n}\n\nreturn [\n  {\n    json: {\n      slot_start: null,\n      slot_end: null,\n      message: \"No available slot found\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        -752
+      ],
+      "id": "66e19e42-cac6-4ff4-ac06-22a0cc459119",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "lookkhan838338@gmail.com",
+          "mode": "list",
+          "cachedResultName": "lookkhan838338@gmail.com"
+        },
+        "additionalFields": {
+          "attendees": [
+            "={{ $('Code in JavaScript').item.json.email }}"
+          ],
+          "description": "=Name: {{ $('Code in JavaScript').item.json.name }}\nPhone: {{ $('Code in JavaScript').item.json.phone }}\nEmail: {{ $('Code in JavaScript').item.json.email }}\nLocation: {{ $('Code in JavaScript').item.json.location }}\nBudget: {{ $('Code in JavaScript').item.json.budget }}\nProperty Type: {{ $('Code in JavaScript').item.json.propertyType }}\nBHK: {{ $('Code in JavaScript').item.json.bhk }}\nTimeline: {{ $('Code in JavaScript').item.json.timeline }}\nLead Score: {{ $('AI Agent').item.json.output.lead_score }}\nLead Type: {{ $('AI Agent').item.json.output.lead_type }}\nLead Source: {{ $('AI Agent').item.json.output.lead_source }}\nMessage: {{ $('Code in JavaScript').item.json.message }}\nReason: {{ $('AI Agent').item.json.output.reason }}",
+          "summary": "={{ $('Get many events').item.json.organizer.email }} "
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        976,
+        -752
+      ],
+      "id": "88b37c26-9fe9-475f-883a-8722206903ba",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "bqzFndjX6K5KQRGG",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "lookkhan838338@gmail.com",
+        "subject": "Hot Lead",
+        "emailType": "text",
+        "message": "={{ $json.result.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1504,
+        -752
+      ],
+      "id": "95afa257-2ac9-41f9-b24e-46f377ac83b5",
+      "name": "Sales Team Notification",
+      "webhookId": "595f9e15-783c-46ec-b669-1d8a4ac55e28",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4SUze4OykYjgcBT2",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "6770558017",
+        "text": "=HOT LEAD \n{{ $json.description }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1248,
+        -752
+      ],
+      "id": "64f3aba6-b1c2-449b-95a9-8acc4d6a5897",
+      "name": "Telegram Notification",
+      "webhookId": "d273865a-c2b3-4a15-a977-62da7ee42e1d",
+      "credentials": {
+        "telegramApi": {
+          "id": "SZt88YfP5rPVKZEZ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "6770558017",
+        "text": "=Warm LEAD \nname = {{ $json.output.name }}\nphone = {{ $json.output.phone }}\nemail = {{ $json.output.email }}\nBudget = {{ $json.output.budget }}\nProperty_type = {{ $json.output.property_type }}\nBHK = {{ $json.output.bhk }}\nTime Line = {{ $json.output.timeline }}\nLead_Source = {{ $json.output.lead_source }}\nMessage = {{ $json.output.message }}\nLead_score = {{ $json.output.lead_score }}\nLead_type = {{ $json.output.lead_type }}\nReason = {{ $json.output.reason }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        -512
+      ],
+      "id": "c6e94475-13fb-4a8d-815f-25452e6e0638",
+      "name": "Telegram Notification Warm",
+      "webhookId": "d273865a-c2b3-4a15-a977-62da7ee42e1d",
+      "credentials": {
+        "telegramApi": {
+          "id": "SZt88YfP5rPVKZEZ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "6770558017",
+        "text": "=Cold Lead\nname = {{ $json.output.name }}\nphone = {{ $json.output.phone }}\nemail = {{ $json.output.email }}\nBudget = {{ $json.output.budget }}\nProperty_type = {{ $json.output.property_type }}\nBHK = {{ $json.output.bhk }}\nTime Line = {{ $json.output.timeline }}\nLead_Source = {{ $json.output.lead_source }}\nMessage = {{ $json.output.message }}\nLead_score = {{ $json.output.lead_score }}\nLead_type = {{ $json.output.lead_type }}\nReason = {{ $json.output.reason }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        -160
+      ],
+      "id": "615b59c3-aeb9-4d21-90c8-8ada6bf9f774",
+      "name": "Telegram Notification Cold",
+      "webhookId": "d273865a-c2b3-4a15-a977-62da7ee42e1d",
+      "credentials": {
+        "telegramApi": {
+          "id": "SZt88YfP5rPVKZEZ",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data save": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Data Check": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Phone Number AND Email Validation check": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Get many events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram Notification Warm",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram Notification Cold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many events": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Create an event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Notification": {
+      "main": [
+        [
+          {
+            "node": "Sales Team Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "60a854ec-0237-4daf-98bb-48c428f7fc70",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2191842941dbaedeaf83107ec77007b38709eead42ff999c9ef39436ad38a31e"
+  },
+  "nodeGroups": [],
+  "id": "RVvvfY3E4Oj0atlj",
+  "tags": []
+}
